@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 import time
 

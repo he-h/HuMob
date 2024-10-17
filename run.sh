@@ -38,7 +38,7 @@ python main.py --model_name $MODEL_NAME \
                --location_embedding_size $LOCATION_EMBED_SIZE \
                --dropout $DROPOUT \
                --max_seq_length $MAX_SEQ_LENGTH \
-               --base_lr $BASE_LR \
+               --lr $BASE_LR \
                --location_embedding_lr $LOCATION_EMBEDDING_LR \
                --num_epochs $EPOCHS \
                --device "cuda:0"
@@ -70,7 +70,7 @@ python main.py --model_name $MODEL_NAME \
                --location_embedding_size $LOCATION_EMBED_SIZE \
                --dropout $DROPOUT \
                --max_seq_length $MAX_SEQ_LENGTH \
-               --base_lr $BASE_LR \
+               --lr $BASE_LR \
                --location_embedding_lr $LOCATION_EMBEDDING_LR \
                --num_epochs $EPOCHS \
                --device "cuda:0" \

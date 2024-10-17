@@ -78,86 +78,132 @@ class SelfAttention(nn.Module):
         attention_output = self.layer_norm(attention_output + hidden_states)
         return attention_output
 
-
-class MobilityTransformer(nn.Module):
-    """
-    A simplified transformer model tailored for mobility prediction with fewer parameters than MobilityBERT.
-
-    Attributes:
-        num_location_ids (int): Number of distinct location identifiers.
-        hidden_size, hidden_layers, attention_heads (int): Configuration parameters for the transformer.
-        day_embedding, time_embedding, day_of_week_embedding, weekday_embedding, location_embedding (nn.Embedding): Embeddings for different input features.
-        input_projection (nn.Linear): Projects concatenated embeddings to the transformer's input size.
-        output_projection (nn.Linear): Projects transformer output to predict locations.
-    """
-    def __init__(self, num_location_ids, hidden_size, hidden_layers, attention_heads,
-                 day_embedding_size, time_embedding_size, day_of_week_embedding_size, weekday_embedding_size, location_embedding_size,
-                 max_seq_length):
-        super().__init__()
-        self.config = BertConfig(
-            vocab_size=1,  # Not using traditional text tokenization
-            hidden_size=hidden_size,
-            num_hidden_layers=hidden_layers,
-            num_attention_heads=attention_heads,
-            intermediate_size=hidden_size * 2,  # Reduced intermediate layer size for efficiency
-            max_position_embeddings=max_seq_length
-        )
-        self.bert = BertModel(self.config)
-
-        # Embedding layers for various input features
-        self.day_embedding = nn.Embedding(75, day_embedding_size)
-        self.time_embedding = nn.Embedding(48, time_embedding_size)
-        self.day_of_week_embedding = nn.Embedding(7, day_of_week_embedding_size)
-        self.weekday_embedding = nn.Embedding(2, weekday_embedding_size)
-        self.location_embedding = nn.Embedding(num_location_ids, location_embedding_size)
-
-        # Project combined embeddings to hidden size for transformer input
-        input_size = day_embedding_size + time_embedding_size + day_of_week_embedding_size + weekday_embedding_size + location_embedding_size + 1
-        self.input_projection = nn.Linear(input_size, self.config.hidden_size)
-        self.output_projection = nn.Linear(self.config.hidden_size, num_location_ids)
-
-    def forward(self, input_seq_feature, historical_locations, predict_seq_feature):
-        """
-        Processes both historical and future input sequences for mobility prediction using an embedded transformer.
-
-        Args:
-            input_seq_feature (torch.Tensor): Historical input features.
-            historical_locations (torch.Tensor): Locations corresponding to historical inputs.
-            predict_seq_feature (torch.Tensor): Future sequence features for prediction.
-
-        Returns:
-            torch.Tensor: Predicted location probabilities.
-        """
-        # Extract features and embed each
-        historical_days, historical_times, historical_day_of_weeks, hist_weekday, hist_delta = map(
-            lambda x: input_seq_feature[:, :, x], range(5))
-        future_days, future_times, future_day_of_weeks, future_weekday, future_delta = map(
-            lambda x: predict_seq_feature[:, :, x], range(5))
-
-        # Embed and concatenate features for input
-        hist_embedded = torch.cat([
-            self.day_embedding(historical_days),
-            self.time_embedding(historical_times),
-            self.day_of_week_embedding(historical_day_of_weeks),
-            hist_delta.unsqueeze(-1).float(),
-            self.location_embedding(historical_locations)
-        ], dim=-1)
+class PositionalEncoding(nn.Module):
+    def __init__(self, model_dim, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.model_dim = model_dim
+        pe = torch.zeros(max_len, model_dim)
+        position = torch.arange(0, max_len).unsqueeze(1).float()
+        div_term = torch.exp(torch.arange(0, model_dim, 2).float() * -(math.log(10000.0) / model_dim))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)
+        self.register_buffer('pe', pe)
+    
+    def forward(self, x):
+        return x + self.pe[:, :x.size(1)]
+    
+class Transformer(nn.Module):
+    def __init__(self, day_embedding_dim=16, time_embedding_dim=16, day_of_week_dim=8, user_embedding_dim=64, num_users=100,
+                 model_dim=512, n_heads=8, num_layers=6, dropout=0.3, fc_layers=2, num_classes=40000):
+        '''
+        A Transformer model for mobility prediction, incorporating embeddings for day, time, day of the week, and user ID.
+        '''
+        super(Transformer, self).__init__()
+        self.model_dim = model_dim
         
-        future_embedded = torch.cat([
-            self.day_embedding(future_days),
-            self.time_embedding(future_times),
-            self.day_of_week_embedding(future_day_of_weeks),
-            future_delta.unsqueeze(-1).float(),
-            torch.zeros_like(hist_embedded)[:, :future_days.size(1)]
-        ], dim=-1)
+        # Embeddings for day, time of day, and day of the week
+        self.day_embedding = nn.Embedding(75, day_embedding_dim)
+        self.time_embedding = nn.Embedding(48, time_embedding_dim)
+        self.day_of_week_embedding = nn.Embedding(7, day_of_week_dim)
+        self.time_of_day_embedding = nn.Embedding(24, time_embedding_dim)
+        # self.delta_time_embedding = nn.Embedding(10000, time_embedding_dim) # consider adding positional encoding instead of embedding
+        self.class_embedding = nn.Embedding(num_classes, model_dim)
+        
+        # Embedding for user ID
+        self.user_embedding = nn.Embedding(num_users, user_embedding_dim)
+        
+        # Linear layer to combine day, time, and day of the week embeddings
+        self.time_feature_combination = nn.Linear(day_embedding_dim + time_embedding_dim + day_of_week_dim + user_embedding_dim + time_embedding_dim + 1, model_dim)
+        
+        # Positional Encoding
+        self.positional_encoding = PositionalEncoding(model_dim)
+        
+        # Transformer encoder for processing input sequence
+        encoder_layer = nn.TransformerEncoderLayer(d_model=model_dim, nhead=n_heads, dropout=dropout, activation='gelu')
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+        # Transformer decoder for predicting future classes
+        decoder_layer = nn.TransformerDecoderLayer(d_model=model_dim, nhead=n_heads, dropout=dropout, activation='gelu')
+        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
+        
+        # Multi-layer fully connected network with GELU activation
+        self.fc_layers = nn.ModuleList()
+        for _ in range(fc_layers - 1):
+            self.fc_layers.append(nn.Linear(model_dim, model_dim))
+            self.fc_layers.append(nn.GELU())
+            self.fc_layers.append(nn.Dropout(dropout))
+        
+        # Final layer in the fully connected network
+        self.fc_layers.append(nn.Linear(model_dim, model_dim))
+        self.dropout = nn.Dropout(dropout)
+        
+        # Output projection to predict class probabilities
+        self.output_projection = nn.Linear(model_dim, num_classes)
+        
+        # self.init_weights()
 
-        combined_input = torch.cat([hist_embedded, future_embedded], dim=1)
-        transformer_input = self.input_projection(combined_input)
+        
+    def forward(self, input_seq_x, input_seq_y, predict_seq_x):
+        """
+        :param input_seq_x: Input sequence of shape (batch_size, seq_length, 3), where 3 corresponds to [day, time, day_of_week]
+        :param input_seq_y: Corresponding labels of shape (batch_size, seq_length)
+        :param predict_seq_x: Prediction sequence of shape (batch_size, predict_seq_length, 3)
+        :return: Predicted class sequence of shape (predict_seq_length, batch_size, num_classes)
+        """
+        batch_size, seq_len, _ = input_seq_x.size()
+        
+        # Embed user ID and expand it to match the sequence length
+        embedded_uid = self.user_embedding(input_seq_x[:, :, 2])
+        
+        # Embed day, time, and day of the week from input_seq_x
+        embedded_days = self.day_embedding(input_seq_x[:, :, 0])
+        embedded_times = self.time_embedding(input_seq_x[:, :, 1])
+        embedded_day_of_week = self.day_of_week_embedding(input_seq_x[:, :, 3])
+        embedded_time_of_day = self.time_of_day_embedding(input_seq_x[:, :, 4])
+        embedded_delta_time = input_seq_x[:, :, 5].unsqueeze(-1).float()
 
-        # Feed into transformer and project output to location space
-        transformer_output = self.bert(inputs_embeds=transformer_input)
-        logits = self.output_projection(transformer_output.last_hidden_state[:, -future_days.size(1):])
-        return logits
+        # Combine the time features with user embedding
+        combined_features = torch.cat((embedded_days, embedded_times, embedded_uid, embedded_day_of_week, embedded_time_of_day, embedded_delta_time), dim=-1)
+        embedded_time_features = self.time_feature_combination(combined_features)
+        
+        # Positional Encoding
+        embedded_time_features = self.positional_encoding(embedded_time_features.transpose(0, 1)).transpose(0, 1)
+        
+        embedded_class = self.class_embedding(input_seq_y)
+        
+        # Combine time features and class embeddings
+        embedded_input = embedded_time_features + embedded_class
+        # Encode the input sequence
+        encoder_output = self.transformer_encoder(embedded_input.transpose(0, 1)).transpose(0, 1)
+        
+        # Embed future day, time, and day of the week from predict_seq_x
+        future_seq_len = predict_seq_x.size(1)
+        embedded_future_uid = self.user_embedding(predict_seq_x[:, :, 2])
+        embedded_future_days = self.day_embedding(predict_seq_x[:, :, 0])
+        embedded_future_times = self.time_embedding(predict_seq_x[:, :, 1])
+        embedded_future_day_of_week = self.day_of_week_embedding(predict_seq_x[:, :, 3])
+        embedded_future_time_of_day = self.time_of_day_embedding(predict_seq_x[:, :, 4])
+        embedded_future_delta_time = predict_seq_x[:, :, 5].unsqueeze(-1).float()
+        
+        # Combine the future time features with user embedding
+        combined_future_features = torch.cat((embedded_future_days, embedded_future_times, embedded_future_uid, embedded_future_day_of_week, embedded_future_time_of_day, embedded_future_delta_time), dim=-1)
+        embedded_future_time_features = self.time_feature_combination(combined_future_features)
+        
+        # Positional Encoding for future features
+        embedded_future_time_features = self.positional_encoding(embedded_future_time_features.transpose(0, 1)).transpose(0, 1)
+        
+        # Decode using the encoded context from the past sequence
+        decoder_output = self.transformer_decoder(embedded_future_time_features.transpose(0, 1), encoder_output.transpose(0, 1))
+        
+        # Apply the multi-layer fully connected network with GELU activation
+        for layer in self.fc_layers:
+            decoder_output = layer(decoder_output)
+        
+        # Project the decoder output to the class space
+        predicted_output = self.output_projection(decoder_output.transpose(0, 1)).transpose(0, 1)
+        
+        return predicted_output
     
 def hf_predict_location(df, start_day=60, end_day=74):
     '''
