@@ -3,20 +3,18 @@
 ✨ If you find this resource helpful, please consider citing our paper:
 
 ```bibtex
-@inproceedings{he2024stmoebert,
-  title={{ST-MoE-BERT}: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction},
-  author={Haoyu He, Haozheng Luo, Qi R. Wang},
-  booktitle={Proceedings of the 2rd International Workshop on the Human Mobility Prediction Challenge},
+@article{he2024st,
+  title={ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction},
+  author={He, Haoyu and Luo, Haozheng and Wang, Qi R},
+  journal={arXiv preprint arXiv:2410.14099},
   year={2024}
 }
-```
 
 ## Introduction
 
 This repository contains the code for the paper "ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction". The code is based on the [ST-MoE-BERT]()
 
 ![Alt text](figures/pipeline.jpg "Pipeline")
-
 
 ## Data
 
@@ -35,7 +33,6 @@ In this project, **City A**'s data (the largest dataset with 100,000 users) is u
 
 The data consists of individual mobility trajectories recorded over time, with movements mapped to a 500-meter by 500-meter grid format. This structure allows for precise spatial-temporal analysis.
 
-
 ## Requirements
 
 Ensure you have Python 3.8+ installed on your system. The dependencies for this project can be installed via:
@@ -51,7 +48,7 @@ pip install -r requirements.txt
 To initiate training or fine-tuning of a model, use the `run.sh` script. This script is designed to be flexible, allowing you to specify the model architecture, training parameters, and the city for which you want to train or fine-tune the model. Initially, you can train on one city (e.g., City A) and then fine-tune the trained model on other cities (e.g., Cities B, C, and D). Here's how to use the script:
 
 ```bash
-./run.sh
+bash ./run.sh
 ```
 
 ### Command Line Arguments
@@ -71,7 +68,7 @@ These are the configurable options available when executing the training and fin
 - `--dropout`: The dropout rate to apply within the model for regularization.
 - `--max_seq_length`: The maximum sequence length that the model expects as input.
 - `--lr`: The base learning rate for the optimizer.
-- `--location_embedding_lr`: Optional, specifies a different learning rate for the location embeddings if needed; if not set, the `base_lr` is used for all parameters.
+- `--location_embedding_lr`: Optional, specifies a different learning rate for the location embeddings if needed; if not set, the `lr` is used for all parameters.
 - `--num_epochs`: The total number of training epochs.
 - `--device`: The computing device to use, such as `cuda:0` for GPU or `cpu` for CPU.
 - `--model_path`: The file path to the pre-trained model weights, used for initializing the model before training.
