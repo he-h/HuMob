@@ -9,6 +9,7 @@
   journal={arXiv preprint arXiv:2410.14099},
   year={2024}
 }
+```
 
 ## Introduction
 
