@@ -1,5 +1,8 @@
 # ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction
 
+![GitHub License](https://img.shields.io/github/license/:user/:repo)
+
+
 ✨ If you find this resource helpful, please consider citing our paper:
 
 ```bibtex
