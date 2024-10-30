@@ -1,7 +1,6 @@
 # ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction
 
 ![GitHub License](https://img.shields.io/github/license/he-h/HuMob)
-![Static Badge](https://img.shields.io/badge/HuMob%20Challenge%202024-1)
 ![Static Badge](https://img.shields.io/badge/HuMob_Challenge_2024_DTW-rank_1-blue)
 
 
