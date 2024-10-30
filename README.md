@@ -11,9 +11,11 @@
 }
 ```
 
+🚩 **News** (October 2024): We achieve first place in Dynamic Time Wrapping (DTW) metric out of 100+ teams at [HuMob 2024](https://wp.nyu.edu/humobchallenge2024/). Check out our paper [here](https://arxiv.org/abs/2410.14099)!
+
 ## Introduction
 
-This repository contains the code for the paper "ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction". The code is based on the [ST-MoE-BERT]()
+This repository contains the code for the paper "ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction". The code is based on the [ST-MoE-BERT](https://arxiv.org/abs/2410.14099)
 
 ![Alt text](figures/pipeline.jpg "Pipeline")
 
