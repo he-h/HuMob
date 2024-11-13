@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 from transformers import BertModel, BertConfig
+from tqdm import tqdm
+import math
 from utils import *
 
 class SelfAttention(nn.Module):
@@ -463,6 +465,8 @@ class MobilityBERTMoE(nn.Module):
         self.config = BertConfig(
             vocab_size=1,
             max_position_embeddings=max_seq_length,
+            hidden_size=hidden_size,
+            num_hidden_layers=hidden_layers,
         )
 
         self.bert = BertModel(self.config)

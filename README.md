@@ -20,7 +20,7 @@
 
 ## Introduction
 
-This repository contains the code for the paper "ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction". The code is based on the [ST-MoE-BERT](https://arxiv.org/abs/2410.14099)
+This repository contains the code for the paper "ST-MoE-BERT: A Spatial-Temporal Mixture-of-Experts Framework for Long-Term Cross-City Mobility Prediction". The code is based on the [ST-MoE-BERT](https://arxiv.org/abs/2410.14099). The pre-trained model is available on [Hugging Face](https://huggingface.co/h-h-y/ST-MoE-BERT) for easy access and deployment.
 
 ![Alt text](figures/pipeline.jpg "Pipeline")
 

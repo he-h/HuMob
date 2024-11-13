@@ -1,0 +1,13 @@
+{
+    "num_location_ids": 40000,
+    "hidden_size": 256,
+    "hidden_layers": 24,
+    "attention_heads": 16,
+    "day_embed_size": 64,
+    "time_embed_size": 64,
+    "day_of_week_embed_size": 64,
+    "weekday_embed_size": 32,
+    "location_embed_size": 256,
+    "dropout": 0.2,
+    "max_seq_length": 3648
+}
